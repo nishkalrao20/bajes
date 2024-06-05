@@ -391,7 +391,7 @@ class Detector(object):
         dec = self.latitude
         return ra, dec
 
-    def project_fdwave(self, wave, params, tag, roq=None):
+    def project_fdwave(self, wave, params, tag, roq=None, roq_inspiral=None):
         """
             Project waveform on Detector, with frequency-domain output
 
@@ -414,14 +414,14 @@ class Detector(object):
         if tag == 'freq':
 
             # In the ROQ formalism, the time delay is already incorporated in the pre-computed weights.
-            if roq==None: return proj_h*np.exp(-2j*np.pi*self.freqs*delay)
+            if ((roq==None) and (roq_inspiral==None)): return proj_h*np.exp(-2j*np.pi*self.freqs*delay)
             else:         return proj_h
 
         elif tag == 'time':
             # tdwf_2_fdwf (compute fft, interpolate) + apply time delay
             return tdwf_2_fdwf(self.freqs, proj_h, 1./self.srate) * np.exp(-2j*np.pi*self.freqs*delay)
 
-    def project_tdwave(self, wave, params, tag, roq=None):
+    def project_tdwave(self, wave, params, tag, roq=None, roq_inspiral=None):
         """
             Project waveform on Detector, with time-domain output
 
@@ -446,7 +446,7 @@ class Detector(object):
 
         elif tag == 'freq':
             # compute ifft and apply time delay from geocenter
-            if roq==None: return fdwf_2_tdwf(self.freqs, proj_h * np.exp(-2j*np.pi*self.freqs*delay), 1./self.srate)
+            if ((roq==None) and (roq_inspiral==None)): return fdwf_2_tdwf(self.freqs, proj_h * np.exp(-2j*np.pi*self.freqs*delay), 1./self.srate)
             else:         return proj_h
 
     def store_measurement(self,
@@ -493,7 +493,7 @@ class Detector(object):
         self._dd = (4./self.seglen) * np.sum(np.abs(self.data)**2./self.psd)
 
 
-    def compute_inner_products(self, hphc, params, tag, psd_weight_factor=False, roq=None):
+    def compute_inner_products(self, hphc, params, tag, psd_weight_factor=False, roq=None, roq_inspiral=None):
         """
             Compute inner products
 
@@ -511,7 +511,7 @@ class Detector(object):
         """
 
         # The hphc waveform was already time-shifted to the center of the segment (seglen/2.), now add `time_shift` and the time delay, together with projection onto the detector.
-        wav = self.project_fdwave(hphc, params, tag, roq=roq)
+        wav = self.project_fdwave(hphc, params, tag, roq=roq, roq_inspiral=roq_inspiral)
 
         # apply calibration envelopes
         if self.nspcal > 0:
@@ -535,6 +535,10 @@ class Detector(object):
             hh             = np.dot(roq[self.ifo]['psi_weights'], np.abs(wav[roq['mask_psi']])**2)
             tc             = self.seglen/2.+self.time_delay_from_earth_center(params['ra'], params['dec'], params['t_gps']+params['time_shift']) + params['time_shift']
             dh             = np.dot(roq[self.ifo]['omega_weights_interp'](tc), wav[roq['mask_omega']])
+        elif roq_inspiral is not None:
+            hh             = np.dot(roq_inspiral[self.ifo]['psi_weights'], np.abs(wav[roq_inspiral['mask_psi']])**2) + (4./self.seglen) * (np.abs(wav[~roq_inspiral['mask_psi']])**2./psd[~roq_inspiral['mask_psi']]).sum()
+            tc             = self.seglen/2.+self.time_delay_from_earth_center(params['ra'], params['dec'], params['t_gps']+params['time_shift']) + params['time_shift']
+            dh             = np.dot(roq_inspiral[self.ifo]['omega_weights_interp'](tc), wav[roq_inspiral['mask_omega']]) + (4./self.seglen[~roq_inspiral['mask_psi']]) * np.conj(self.data[~roq_inspiral['mask_psi']])*wav[~roq_inspiral['mask_psi']]/psd[~roq_inspiral['mask_psi']]
         else:
             hh             = (4./self.seglen) * (np.abs(wav)**2./psd).sum()
             dh             = np.zeros(self._nfr, dtype=complex)

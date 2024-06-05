@@ -267,7 +267,7 @@ class Waveform(object):
         self.wave_func, self.domain = __get_waveform_generator__(self.approx, self.seglen, self.srate)
 
 
-    def compute_hphc(self, params, roq=None):
+    def compute_hphc(self, params, roq=None, roq_inspiral=None):
         """ Compute waveform for compact binary coalescences
             --------
             params : dictionary
@@ -323,6 +323,9 @@ class Waveform(object):
 
             roq : dictionary
             Dictionary containing ROQ options, used to skip time-shifting.
+
+            roq_inspiral : dictionary
+            Dictionary containing ROQ inspiral options, used to skip time-shifting.
 
             --------
             return hp, hc
@@ -387,7 +390,7 @@ class Waveform(object):
             # padding + time-shifting (amplitude peak as central value)
             hp, hc = centering_tdwave(hp, hc, self.seglen, self.srate, params['tukey'])
 
-        elif((self.domain == 'freq') and (roq==None)):
+        elif((self.domain == 'freq') and (roq==None) and (roq_inspiral==None)):
             # Time-shifting the amplitude peak to the center of the data segment (seglen/2). In the ROQ case, this is done separately.
             hp = hp * np.exp(1j*np.pi*self.freqs*self.seglen)
             hc = hc * np.exp(1j*np.pi*self.freqs*self.seglen)

@@ -190,7 +190,7 @@ def fill_params_from_dict(dict):
     return  params, variab, const
 
 # SNRs
-def extract_snr(ifos, detectors, hphc, pars, domain, marg_phi=False, marg_time=False, ngrid=500, roq=None):
+def extract_snr(ifos, detectors, hphc, pars, domain, marg_phi=False, marg_time=False, ngrid=500, roq=None, roq_inspiral=None):
 
     # compute SNR and (dt, dphi) sample
     if (marg_time and marg_phi) :
@@ -202,19 +202,19 @@ def extract_snr(ifos, detectors, hphc, pars, domain, marg_phi=False, marg_time=F
         phiref, snr_mf, snr_mf_per_det, snr_opt, snr_opt_per_det         = extract_snr_sample_phi_marg(ifos, detectors, hphc, pars, domain, ngrid=ngrid)
         tshift = 0.
     else :
-        snr_mf, snr_mf_per_det, snr_opt, snr_opt_per_det                 = extract_snr_sample(ifos, detectors, hphc, pars, domain, roq)
+        snr_mf, snr_mf_per_det, snr_opt, snr_opt_per_det                 = extract_snr_sample(ifos, detectors, hphc, pars, domain, roq, roq_inspiral)
         phiref = 0.
         tshift = 0.
 
     return phiref, tshift, snr_mf, snr_mf_per_det, snr_opt, snr_opt_per_det
 
-def extract_snr_sample(ifos, detectors, hphc, pars, domain, roq):
+def extract_snr_sample(ifos, detectors, hphc, pars, domain, roq, roq_inspiral):
 
     dh_list     = []
     hh_list     = []
 
     for ifo in ifos:
-        this_dh, this_hh, this_dd = detectors[ifo].compute_inner_products(hphc, pars, domain, roq)
+        this_dh, this_hh, this_dd = detectors[ifo].compute_inner_products(hphc, pars, domain, roq, roq_inspiral)
         dh_list.append(this_dh)
         hh_list.append(this_hh)
 
@@ -227,6 +227,7 @@ def extract_snr_sample(ifos, detectors, hphc, pars, domain, roq):
 
         # In the ROQ case, the sum was already taken when computing the scalar product with the weights.
         if roq is not None : _dh = np.real(dh)
+        elif roq_inspiral is not None : _dh = np.real(dh)
         else               : _dh = np.real(np.sum(dh))
 
         snr_mf                   = _dh/np.sqrt(np.real(hh))

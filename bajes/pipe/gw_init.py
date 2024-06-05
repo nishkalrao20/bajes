@@ -138,6 +138,7 @@ def initialize_gwlikelihood_kwargs(opts):
     l_kwargs['seglen']          = opts.seglen
     l_kwargs['f-min']           = opts.f_min
     l_kwargs['f-max']           = opts.f_max
+    l_kwargs['f-merg']          = opts.f_merg  
     l_kwargs['approx']          = opts.approx
     l_kwargs['nspcal']          = opts.nspcal
     l_kwargs['nweights']        = opts.nweights

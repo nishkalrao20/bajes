@@ -352,13 +352,13 @@ def make_histograms(names, posterior_samples, prior_samples, outdir):
 def _wrap_compute_wf_and_snr(args):
     return compute_wf_and_snr(*args)
 
-def compute_wf_and_snr(p, dets, noises, w, marg_phi=False, marg_time=False, roq=None):
+def compute_wf_and_snr(p, dets, noises, w, marg_phi=False, marg_time=False, roq=None, roq_inspiral=None):
 
     # compute waveform
     hphc   = w.compute_hphc(p)
 
     # compute SNR
-    phiref, tshift, snr_mf, snr_mf_per_det, snr_opt, snr_opt_per_det = extract_snr(list(dets.keys()), dets, hphc, p, w.domain, marg_phi=marg_phi, marg_time=marg_time, roq=roq)
+    phiref, tshift, snr_mf, snr_mf_per_det, snr_opt, snr_opt_per_det = extract_snr(list(dets.keys()), dets, hphc, p, w.domain, marg_phi=marg_phi, marg_time=marg_time, roq=roq, roq_inspiral=None)
 
     # If the likelihood was phase or time marginalised, apply the correct factor to the waveform.
     # In the unmarginalised case, tshift and phiref are zero, thus the lines below do not have any effect.
@@ -412,6 +412,7 @@ def reconstruct_waveform(outdir, posterior, container_inf, container_gw, N_sampl
     constants = container_inf.prior.const
     w         = container_inf.like.wave
     roq       = container_inf.like.roq
+    roq_inspiral       = container_inf.like.roq_inspiral
 
     # set sp-cal
     try:
@@ -475,7 +476,9 @@ def reconstruct_waveform(outdir, posterior, container_inf, container_gw, N_sampl
                                                                                                  w                                                               ,
                                                                                                  marg_phi  = container_inf.like.marg_phi_ref                     ,
                                                                                                  marg_time = container_inf.like.marg_time_shift                  ,
-                                                                                                 roq       = roq                                                 )
+
+roq       = roq                                                 ,
+                                                                                              roq_inspiral       = roq_inspiral                               )
 
             # collect quantities
             SNRs_mf.append(snr_mf)
@@ -555,7 +558,7 @@ def reconstruct_waveform(outdir, posterior, container_inf, container_gw, N_sampl
     snr_opt_fl.close()
 
     #FIXME: Waveform reconstruction has not been yet implemented when the ROQ is active.
-    if roq is not None: return data_output, snr_output
+    if ((roq is not None) and (roq_inspiral is not None)): return data_output, snr_output
 
     # Plot the data
     fig = plt.figure(figsize=(8,6))

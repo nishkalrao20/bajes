@@ -29,7 +29,7 @@ class GWLikelihood(Likelihood):
                  nspcal=0, spcal_freqs=None,
                  nweights=0, len_weights=None,
                  marg_phi_ref=False, marg_time_shift=False,
-                 roq=None,
+                 roq=None, roq_inspiral=None,
                  **kwargs):
 
         # run standard initialization
@@ -41,6 +41,7 @@ class GWLikelihood(Likelihood):
 
         # Load ROQ object containing both frequency axes and weights for all detectors.
         self.roq = roq
+        self.roq_inspiral = roq_inspiral
 
         # store information
         self.nspcal = nspcal
@@ -51,7 +52,7 @@ class GWLikelihood(Likelihood):
         self.marg_time_shift    = marg_time_shift
 
         # Compatibility check.
-        if((self.roq is not None) and (self.marg_time_shift)):
+        if((self.roq is not None) and (self.roq_inspiral is not None) and (self.marg_time_shift)):
             logger.error("Time-shift marginalization has not been implemented with the ROQ approximation.")
             raise AttributeError("Time-shift marginalization has not been implemented with the ROQ approximation.")
 
@@ -98,9 +99,10 @@ class GWLikelihood(Likelihood):
         # initialize waveform generator
         from ..obs.gw.waveform import Waveform
         if self.roq is not None: self.wave = erase_init_wrapper(Waveform(self.roq['freqs_join'], srate, seglen, approx))
+        elif self.roq_inspiral is not None: self.wave = erase_init_wrapper(Waveform(self.roq_inspiral['freqs_join'], srate, seglen, approx))
         else:                    self.wave = erase_init_wrapper(Waveform(freqs[mask],            srate, seglen, approx))
 
-        if self.roq is not None and self.wave.domain == 'time':
+        if ((self.roq is not None) and (self.roq_inspiral is not None) and (self.wave.domain == 'time')):
             logger.error("ROQ is available only with frequency-domain waveforms.")
             raise ValueError("ROQ is available only with frequency-domain waveforms.")
 
@@ -111,7 +113,7 @@ class GWLikelihood(Likelihood):
 
         # compute waveform
         logger.debug("Generating waveform for {}".format(params))
-        wave    = self.wave.compute_hphc(params, roq=self.roq)
+        wave    = self.wave.compute_hphc(params, roq=self.roq, roq_inspiral=self.roq_inspiral)
         logger.debug("Waveform generated".format(params))
 
         # if hp, hc == [None], [None]
@@ -162,9 +164,10 @@ class GWLikelihood(Likelihood):
             # compute inner products
             for ifo in self.ifos:
                 logger.debug("Projecting over {}".format(ifo))
-                dh_arr_thisifo, hh_thisifo, dd_thisifo, _psdf = self.dets[ifo].compute_inner_products(wave, params, self.wave.domain, psd_weight_factor=True, roq=self.roq)
+                dh_arr_thisifo, hh_thisifo, dd_thisifo, _psdf = self.dets[ifo].compute_inner_products(wave, params, self.wave.domain, psd_weight_factor=True, roq=self.roq, roq_inspiral=self.roq_inspiral)
                 # In the ROQ case, the sum was already taken when computing the scalar product with the weights.
                 if self.roq is not None: dh += (dh_arr_thisifo)
+                elif self.roq_inspiral is not None: dh += (dh_arr_thisifo)
                 else:                    dh += (dh_arr_thisifo).sum()
                 hh += np.real(hh_thisifo)
                 dd += np.real(dd_thisifo)

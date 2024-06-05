@@ -359,6 +359,7 @@ def parse_setup_options():
     # Time series information
     parser.add_argument('--f-min',             dest='f_min',          default=None,      type=float,                         help='Minimum frequency at which likelihood is evaluated [Hz]. Default: None')
     parser.add_argument('--f-max',             dest='f_max',          default=None,      type=float,                         help='Maximum frequency at which likelihood is evaluated [Hz]. Default: None')
+    parser.add_argument('--f-merg',             dest='f_merg',          default=None,      type=float,                         help='Merger frequency at which likelihood is evaluated [Hz]. Default: None')
     parser.add_argument('--srate',             dest='srate',          default=None,      type=float,                         help='Rsequested sampling rate [Hz]. If smaller than data sampling rate, downsampling is applied. Default: None')
     parser.add_argument('--seglen',            dest='seglen',         default=None,      type=float,                         help='Requested length of the segment to be analysed [sec]. If smaller than data total lenght, data are cropped. If longer, data are padded. Default: None.')
 
@@ -412,6 +413,11 @@ def parse_setup_options():
     parser.add_argument('--use-roq',           dest='roq',             default=False,                     action="store_true",  help='ROQ flag, activates ROQ likelihood computation.')
     parser.add_argument('--roq-path',          dest='roq_path',        default='',        type=str,                             help='ROQ data path, storing the basis data generated following the conventions of `https://github.com/bernuzzi/PyROQ/tree/master/PyROQ`.')
     parser.add_argument('--roq-tc-points',     dest='roq_tc_points',   default=10000,     type=int,                             help='Number of points used to interpolate the time axis when using the ROQ. Default: 10000')
+
+    # ROQ Inspiral options
+    parser.add_argument('--use-roq_inspiral',           dest='roq_inspiral',             default=False,                     action="store_true",  help='ROQ Inspiral flag, activates ROQ Inspiral likelihood computation.')
+    parser.add_argument('--roq_inspiral-path',          dest='roq_inspiral_path',        default='',        type=str,                             help='ROQ Inspiral data path, storing the basis data generated following the conventions of `https://github.com/bernuzzi/PyROQ/tree/master/PyROQ`.')
+    parser.add_argument('--roq_inspiral-tc-points',     dest='roq_inspiral_tc_points',   default=10000,     type=int,                             help='Number of points used to interpolate the time axis when using the ROQ Inspiral. Default: 10000')
 
     # GWBinning options
     parser.add_argument('--use-binning',       dest='binning',         default=False,                     action="store_true",  help='Frequency binning flag')
@@ -729,13 +735,16 @@ def get_likelihood_and_prior(opts):
         if ti == 'gw':
 
             # Check inputs compatibility
-            if opts.binning and opts.roq:
+            if opts.roq and opts.roq_inspiral:
+                logger.error("Unable to set simultaneusly ROQ and the ROQ Inspiral approximation. Please choose one of the two options.")
+                raise AttributeError("Unable to set simultaneusly ROQ and the ROQ Inspiral approximation. Please choose one of the two options.")
+            if opts.binning and opts.roq and opts.roq_inspiral:
                 logger.error("Unable to set simultaneusly frequency-binning and the ROQ approximation. Please choose one of the two options.")
                 raise AttributeError("Unable to set simultaneusly frequency-binning and the ROQ approximation. Please choose one of the two options.")
-            if opts.nspcal and opts.roq:
+            if opts.nspcal and opts.roq  and opts.roq_inspiral:
                 logger.error("The ROQ approximation has not yet been extended to incorporate calibration uncertainties. Please choose one of the two options.")
                 raise AttributeError("The ROQ approximation has not yet been extended to incorporate calibration uncertainties. Please choose one of the two options.")
-            if(opts.roq_tc_points < 4):
+            if((opts.roq_tc_points < 4) and (opts.roq_inspiral_tc_points)):
                 logger.error("Number of points on the time grid has to be at least four.")
                 raise ValueError("Number of points on the time grid has to be at least four.")
 
@@ -781,6 +790,38 @@ def get_likelihood_and_prior(opts):
                     l_kwas['roq']['freqs_join'] = roq_freqs_join
                     l_kwas['roq']['mask_psi']   = roq_mask_psi
                     l_kwas['roq']['mask_omega'] = roq_mask_omega
+
+                if opts.roq_inspiral:
+
+                    # compute ROQ weights
+                    l_kwas['roq_inspiral'] = {ifo: {} for ifo in opts.ifos}
+
+                    for ifo in opts.ifos:
+
+                        f_min_merg_mask = np.where((l_kwas['freqs']>=l_kwas['f-min'])&(l_kwas['freqs']<=l_kwas['f-merg']))
+                        freqs_full      = l_kwas['freqs'][f_min_merg_mask]
+                        data_freq       = l_kwas['datas'][ifo].freq_series[f_min_merg_mask]
+                        psd             = l_kwas['noises'][ifo].interp_psd_pad(freqs_full)
+
+                        logger.info("Computing ROQ Inspiral weights for the {} detector ...".format(ifo))
+                        roq_inspiral_freqs_join, roq_inspiral_mask_psi, roq_inspiral_mask_omega, roq_inspiral_psi_weights, roq_inspiral_omega_weights_interp = initialize_roq(opts.roq_inspiral_path     ,
+                                                                                                                                 opts.roq_inspiral_tc_points,
+                                                                                                                                 freqs_full        ,
+                                                                                                                                 data_freq         ,
+                                                                                                                                 psd               ,
+                                                                                                                                 l_kwas['f-min']   ,
+                                                                                                                                 l_kwas['f-merg']   ,
+                                                                                                                                 l_kwas['seglen']  ,
+                                                                                                                                 pr                ,
+                                                                                                                                 l_kwas['approx']  )
+
+                        l_kwas['roq_inspiral'][ifo]['omega_weights_interp'] = roq_inspiral_omega_weights_interp
+                        l_kwas['roq_inspiral'][ifo]['psi_weights']          = roq_inspiral_psi_weights
+
+                    # These quantities are detector independent, since in bajes the time axis is the same for all detectors.
+                    l_kwas['roq_inspiral']['freqs_join'] = roq_inspiral_freqs_join
+                    l_kwas['roq_inspiral']['mask_psi']   = roq_inspiral_mask_psi
+                    l_kwas['roq_inspiral']['mask_omega'] = roq_inspiral_mask_omega
 
             logger.info("Initializing GW likelihood ...")
 
