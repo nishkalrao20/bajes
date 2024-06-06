@@ -218,6 +218,7 @@ class Series(object):
                  seglen      = None ,
                  f_min       = None ,
                  f_max       = None ,
+                 f_merg      = None ,
                  t_gps       = 0.   ,
                  only        = False,
                  filter      = False,
@@ -238,6 +239,7 @@ class Series(object):
                     If given seglen differs from actual seglen, the series is truncated or padded
             f_min   : float (optional), minimum frequency of the input series [Hz]. Default None
             f_max   : float (optional), maximum frequency of the input series [Hz]. Default None
+            f_merg  : float (optional), merger frequency of the input series [Hz]. Default None
             t_gps   : float (optional), reference time. Defaut 0s
             only    : bool (optional), if True, store only input series, without computing fft/ifft. Default False.
             filter  : bool (optional), if True, apply butterworth filter. Default False
@@ -252,6 +254,7 @@ class Series(object):
             self.dt         = 1./self.srate
             self.f_min      = f_min
             self.f_max      = f_max
+            self.f_merg     = f_merg
             self.t_gps      = t_gps
             self.f_Nyq      = self.srate/2.
 
@@ -342,6 +345,7 @@ class Series(object):
 
             self.f_min       = f_min
             self.f_max       = f_max
+            self.f_merg      = f_merg
             if self.f_min == None:
                 self.f_min  = 0.
             if self.f_max == None:

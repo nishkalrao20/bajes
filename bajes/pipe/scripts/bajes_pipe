@@ -510,6 +510,7 @@ def write_setup_string(config, tags, outdir):
                 run_string += '--use-roq_inspiral --roq_inspiral-path {} '.format(config['gw-prior']['roq_inspiral-path'])
                 if 'roq_inspiral-tc-points' in list_keys_in_prior:
                     run_string += '--roq_inspiral-tc-points {} '.format(config['gw-prior']['roq_inspiral-tc-points'])
+            run_string += '--f-merg {} '.format(config['gw-data']['f-merg'])
 
         run_string += '--spin-flag {} '.format(config['gw-prior']['spin-flag'])
         run_string += '--tidal-flag {} '.format(config['gw-prior']['tidal-flag'])

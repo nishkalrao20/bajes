@@ -106,6 +106,10 @@ class GWLikelihood(Likelihood):
             logger.error("ROQ is available only with frequency-domain waveforms.")
             raise ValueError("ROQ is available only with frequency-domain waveforms.")
 
+        if ((self.roq_inspiral is not None) and (datas[self.ifos[0]].f_merg is None)):
+            logger.error("Please provide f-merger for ROQ inspiral.")
+            raise ValueError("Please provide f-merger for ROQ inspiral.")
+
     def log_like(self, params):
         """
             log-likelihood function
