@@ -799,14 +799,17 @@ def get_likelihood_and_prior(opts):
                     for ifo in opts.ifos:
 
                         f_min_merg_mask = np.where((l_kwas['freqs']>=l_kwas['f-min'])&(l_kwas['freqs']<=l_kwas['f-merg']))
-                        freqs_full      = l_kwas['freqs'][f_min_merg_mask]
+                        f_merg_max_mask = np.where((l_kwas['freqs']>=l_kwas['f-merg'])&(l_kwas['freqs']<=l_kwas['f-max']))
+
+                        freqs_insp      = l_kwas['freqs'][f_min_merg_mask]
+                        freqs_pm        = l_kwas['freqs'][f_merg_max_mask]
                         data_freq       = l_kwas['datas'][ifo].freq_series[f_min_merg_mask]
-                        psd             = l_kwas['noises'][ifo].interp_psd_pad(freqs_full)
+                        psd             = l_kwas['noises'][ifo].interp_psd_pad(freqs_insp)
 
                         logger.info("Computing ROQ Inspiral weights for the {} detector ...".format(ifo))
                         roq_inspiral_freqs_join, roq_inspiral_mask_psi, roq_inspiral_mask_omega, roq_inspiral_psi_weights, roq_inspiral_omega_weights_interp = initialize_roq(opts.roq_inspiral_path     ,
                                                                                                                                  opts.roq_inspiral_tc_points,
-                                                                                                                                 freqs_full        ,
+                                                                                                                                 freqs_insp        ,
                                                                                                                                  data_freq         ,
                                                                                                                                  psd               ,
                                                                                                                                  l_kwas['f-min']   ,
@@ -822,6 +825,8 @@ def get_likelihood_and_prior(opts):
                     l_kwas['roq_inspiral']['freqs_join'] = roq_inspiral_freqs_join
                     l_kwas['roq_inspiral']['mask_psi']   = roq_inspiral_mask_psi
                     l_kwas['roq_inspiral']['mask_omega'] = roq_inspiral_mask_omega
+                    l_kwas['roq_inspiral']['freqs_pm'] = freqs_pm
+                    
 
             logger.info("Initializing GW likelihood ...")
 

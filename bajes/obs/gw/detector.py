@@ -536,9 +536,9 @@ class Detector(object):
             tc             = self.seglen/2.+self.time_delay_from_earth_center(params['ra'], params['dec'], params['t_gps']+params['time_shift']) + params['time_shift']
             dh             = np.dot(roq[self.ifo]['omega_weights_interp'](tc), wav[roq['mask_omega']])
         elif roq_inspiral is not None:
-            hh             = np.dot(roq_inspiral[self.ifo]['psi_weights'], np.abs(wav[roq_inspiral['mask_psi']])**2) + (4./self.seglen) * (np.abs(wav[~roq_inspiral['mask_psi']])**2./psd[~roq_inspiral['mask_psi']]).sum()
+            hh             = np.dot(roq_inspiral[self.ifo]['psi_weights'], np.abs(wav[roq_inspiral['mask_psi']])**2) 
             tc             = self.seglen/2.+self.time_delay_from_earth_center(params['ra'], params['dec'], params['t_gps']+params['time_shift']) + params['time_shift']
-            dh             = np.dot(roq_inspiral[self.ifo]['omega_weights_interp'](tc), wav[roq_inspiral['mask_omega']]) + (4./self.seglen[~roq_inspiral['mask_psi']]) * np.conj(self.data[~roq_inspiral['mask_psi']])*wav[~roq_inspiral['mask_psi']]/psd[~roq_inspiral['mask_psi']]
+            dh             = np.dot(roq_inspiral[self.ifo]['omega_weights_interp'](tc), wav[roq_inspiral['mask_omega']])
         else:
             hh             = (4./self.seglen) * (np.abs(wav)**2./psd).sum()
             dh             = np.zeros(self._nfr, dtype=complex)

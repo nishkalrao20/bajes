@@ -99,16 +99,14 @@ class GWLikelihood(Likelihood):
         # initialize waveform generator
         from ..obs.gw.waveform import Waveform
         if self.roq is not None: self.wave = erase_init_wrapper(Waveform(self.roq['freqs_join'], srate, seglen, approx))
-        elif self.roq_inspiral is not None: self.wave = erase_init_wrapper(Waveform(self.roq_inspiral['freqs_join'], srate, seglen, approx))
+        elif self.roq_inspiral is not None: 
+            self.wave = erase_init_wrapper(Waveform(self.roq_inspiral['freqs_join'], srate, seglen, approx))
+            self.wave_pm = erase_init_wrapper(Waveform(self.roq_inspiral['freqs_pm'], srate, seglen, approx))
         else:                    self.wave = erase_init_wrapper(Waveform(freqs[mask],            srate, seglen, approx))
 
         if ((self.roq is not None) and (self.roq_inspiral is not None) and (self.wave.domain == 'time')):
             logger.error("ROQ is available only with frequency-domain waveforms.")
             raise ValueError("ROQ is available only with frequency-domain waveforms.")
-
-        if ((self.roq_inspiral is not None) and (datas[self.ifos[0]].f_merg is None)):
-            logger.error("Please provide f-merger for ROQ inspiral.")
-            raise ValueError("Please provide f-merger for ROQ inspiral.")
 
     def log_like(self, params):
         """
@@ -118,6 +116,8 @@ class GWLikelihood(Likelihood):
         # compute waveform
         logger.debug("Generating waveform for {}".format(params))
         wave    = self.wave.compute_hphc(params, roq=self.roq, roq_inspiral=self.roq_inspiral)
+        if self.roq_inspiral is not None:
+            wave_pm    = self.wave_pm.compute_hphc(params, roq=self.roq, roq_inspiral=self.roq_inspiral)
         logger.debug("Waveform generated".format(params))
 
         # if hp, hc == [None], [None]
@@ -169,6 +169,13 @@ class GWLikelihood(Likelihood):
             for ifo in self.ifos:
                 logger.debug("Projecting over {}".format(ifo))
                 dh_arr_thisifo, hh_thisifo, dd_thisifo, _psdf = self.dets[ifo].compute_inner_products(wave, params, self.wave.domain, psd_weight_factor=True, roq=self.roq, roq_inspiral=self.roq_inspiral)
+                if self.roq_inspiral is not None:
+                    dh_arr_thisifo_insp, hh_thisifo_insp, dd_thisifo_insp, _psdf_insp = self.dets[ifo].compute_inner_products(wave, params, self.wave.domain, psd_weight_factor=True, roq=self.roq, roq_inspiral=self.roq_inspiral)
+                    dh_arr_thisifo_pm, hh_thisifo_pm, dd_thisifo_pm, _psdf_pm = self.dets[ifo].compute_inner_products(wave_pm, params, self.wave_pm.domain, psd_weight_factor=True, roq=self.roq, roq_inspiral=self.roq_inspiral)
+                    dh_arr_thisifo = dh_arr_thisifo_insp + dh_arr_thisifo_pm
+                    hh_thisifo = hh_thisifo_insp + hh_thisifo_pm
+                    dd_thisifo = dd_thisifo_insp + dd_thisifo_pm
+                    _psdf = _psdf_insp + _psdf_pm
                 # In the ROQ case, the sum was already taken when computing the scalar product with the weights.
                 if self.roq is not None: dh += (dh_arr_thisifo)
                 elif self.roq_inspiral is not None: dh += (dh_arr_thisifo)
