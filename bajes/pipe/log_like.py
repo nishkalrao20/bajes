@@ -170,12 +170,9 @@ class GWLikelihood(Likelihood):
                 logger.debug("Projecting over {}".format(ifo))
                 dh_arr_thisifo, hh_thisifo, dd_thisifo, _psdf = self.dets[ifo].compute_inner_products(wave, params, self.wave.domain, psd_weight_factor=True, roq=self.roq, roq_inspiral=self.roq_inspiral)
                 if self.roq_inspiral is not None:
-                    dh_arr_thisifo_insp, hh_thisifo_insp, dd_thisifo_insp, _psdf_insp = self.dets[ifo].compute_inner_products(wave, params, self.wave.domain, psd_weight_factor=True, roq=self.roq, roq_inspiral=self.roq_inspiral)
-                    dh_arr_thisifo_pm, hh_thisifo_pm, dd_thisifo_pm, _psdf_pm = self.dets[ifo].compute_inner_products(wave_pm, params, self.wave_pm.domain, psd_weight_factor=True, roq=self.roq, roq_inspiral=self.roq_inspiral)
-                    dh_arr_thisifo = dh_arr_thisifo_insp + dh_arr_thisifo_pm
-                    hh_thisifo = hh_thisifo_insp + hh_thisifo_pm
-                    dd_thisifo = dd_thisifo_insp + dd_thisifo_pm
-                    _psdf = _psdf_insp + _psdf_pm
+                    dh_arr_thisifo_insp, hh_thisifo_insp, dd_thisifo, _psdf = self.dets[ifo].compute_inner_products(wave, params, self.wave.domain, psd_weight_factor=True, roq=self.roq, roq_inspiral=self.roq_inspiral)
+                    dh_arr_thisifo_pm, hh_thisifo_pm, _, _ = self.dets[ifo].compute_inner_products(wave_pm, params, self.wave_pm.domain, psd_weight_factor=True, roq=self.roq, roq_inspiral=self.roq_inspiral)
+                    dh_arr_thisifo, hh_thisifo = dh_arr_thisifo_insp + dh_arr_thisifo_pm, hh_thisifo_insp + hh_thisifo_pm
                 # In the ROQ case, the sum was already taken when computing the scalar product with the weights.
                 if self.roq is not None: dh += (dh_arr_thisifo)
                 elif self.roq_inspiral is not None: dh += (dh_arr_thisifo)
