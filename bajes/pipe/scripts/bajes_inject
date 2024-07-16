@@ -88,7 +88,7 @@ def make_injection_plot(ifo, time, inj_strain, wave_strain, noise, f_min, outdir
         pass
 
 
-    from scipy.signal import tukey
+    from scipy.signal.windows import tukey
 
     dt                   = np.median(np.diff(time))
     seglen               = time[-1]-time[0]
