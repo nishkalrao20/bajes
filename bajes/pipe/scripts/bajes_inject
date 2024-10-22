@@ -358,6 +358,7 @@ class Injection(object):
                     self.dets[ifo].store_measurement(series, noises[ifo])
                     # compute the data
                     if fdinj_flag:
+                        self.freqs[ifo] = np.linspace(0,self.srate/2.,int(self.srate*self.seglen//2)+1)
                         _wave   = self.dets[ifo].project_fdwave(signal_template, params, wave.domain)
                         _amp    = np.abs(_wave)
                         _phi    = np.unwrap(np.angle(_wave))
